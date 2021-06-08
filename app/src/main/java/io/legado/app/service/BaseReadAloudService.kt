@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.graphics.BitmapFactory
-import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
@@ -14,6 +13,7 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.annotation.CallSuper
 import androidx.core.app.NotificationCompat
+import androidx.media.AudioFocusRequestCompat
 import io.legado.app.R
 import io.legado.app.base.BaseService
 import io.legado.app.constant.*
@@ -26,6 +26,7 @@ import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.book.read.page.entities.TextChapter
 import io.legado.app.utils.getPrefBoolean
 import io.legado.app.utils.postEvent
+import io.legado.app.utils.toastOnUi
 import splitties.init.appCtx
 
 abstract class BaseReadAloudService : BaseService(),
@@ -43,7 +44,7 @@ abstract class BaseReadAloudService : BaseService(),
 
     internal val handler = Handler(Looper.getMainLooper())
     private lateinit var audioManager: AudioManager
-    private var mFocusRequest: AudioFocusRequest? = null
+    private var mFocusRequest: AudioFocusRequestCompat? = null
     private var broadcastReceiver: BroadcastReceiver? = null
     private lateinit var mediaSessionCompat: MediaSessionCompat
     private var title: String = ""
@@ -202,7 +203,11 @@ abstract class BaseReadAloudService : BaseService(),
      * @return 音频焦点
      */
     fun requestFocus(): Boolean {
-        return MediaHelp.requestFocus(audioManager, this, mFocusRequest)
+        val requestFocus = MediaHelp.requestFocus(audioManager, mFocusRequest)
+        if (!requestFocus) {
+            toastOnUi("未获取到音频焦点")
+        }
+        return requestFocus
     }
 
     /**

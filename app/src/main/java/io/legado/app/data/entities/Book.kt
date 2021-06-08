@@ -107,9 +107,16 @@ data class Book(
 
     fun getUnreadChapterNum() = max(totalChapterNum - durChapterIndex - 1, 0)
 
+    fun getDisplayTag() = if (customTag.isNullOrBlank()) kind else customTag
+
     fun getDisplayCover() = if (customCoverUrl.isNullOrEmpty()) coverUrl else customCoverUrl
 
     fun getDisplayIntro() = if (customIntro.isNullOrEmpty()) intro else customIntro
+
+    //自定义简介有自动更新的需求时，可通过更新intro再调用upCustomIntro()完成
+    fun upCustomIntro() {
+        customIntro = intro
+    }
 
     fun fileCharset(): Charset {
         return charset(charset ?: "UTF-8")
@@ -120,6 +127,14 @@ data class Book(
             readConfig = ReadConfig()
         }
         return readConfig!!
+    }
+
+    fun setReverseToc(reverseToc: Boolean) {
+        config().reverseToc = reverseToc
+    }
+
+    fun getReverseToc(): Boolean {
+        return config().reverseToc
     }
 
     fun setUseReplaceRule(useReplaceRule: Boolean) {
@@ -152,14 +167,6 @@ data class Book(
 
     fun setImageStyle(imageStyle: String?) {
         config().imageStyle = imageStyle
-    }
-
-    fun getDelParagraph(): Int {
-        return config().delParagraph
-    }
-
-    fun setDelParagraph(num: Int) {
-        config().delParagraph = num
     }
 
     fun setDelTag(tag: Long) {
@@ -206,15 +213,8 @@ data class Book(
         newBook.customTag = customTag
         newBook.canUpdate = canUpdate
         newBook.readConfig = readConfig
-        delete()
+        delete(this)
         appDb.bookDao.insert(newBook)
-    }
-
-    fun delete() {
-        if (ReadBook.book?.bookUrl == bookUrl) {
-            ReadBook.book = null
-        }
-        appDb.bookDao.delete(this)
     }
 
     fun upInfoFromOld(oldBook: Book?) {
@@ -232,6 +232,13 @@ data class Book(
         }
     }
 
+    fun createBookMark(): Bookmark {
+        return Bookmark(
+            bookName = name,
+            bookAuthor = author,
+        )
+    }
+
     companion object {
         const val hTag = 2L
         const val rubyTag = 4L
@@ -239,15 +246,23 @@ data class Book(
         const val imgStyleDefault = "DEFAULT"
         const val imgStyleFull = "FULL"
         const val imgStyleText = "TEXT"
+
+        fun delete(book: Book?) {
+            book ?: return
+            if (ReadBook.book?.bookUrl == book.bookUrl) {
+                ReadBook.book = null
+            }
+            appDb.bookDao.delete(book)
+        }
     }
 
     @Parcelize
     data class ReadConfig(
+        var reverseToc: Boolean = false,
         var pageAnim: Int = -1,
         var reSegment: Boolean = false,
         var imageStyle: String? = null,
         var useReplaceRule: Boolean = AppConfig.replaceEnableDefault,// 正文使用净化替换规则
-        var delParagraph: Int = 0,//去除段首
         var delTag: Long = 0L,//去除标签
     ) : Parcelable
 

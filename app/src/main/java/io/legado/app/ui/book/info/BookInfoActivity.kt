@@ -1,7 +1,6 @@
 package io.legado.app.ui.book.info
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.os.Bundle
@@ -9,6 +8,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.CheckBox
 import android.widget.LinearLayout
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.bumptech.glide.RequestBuilder
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
@@ -17,12 +17,12 @@ import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.BookType
 import io.legado.app.constant.Theme
+import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.databinding.ActivityBookInfoBinding
 import io.legado.app.help.BlurTransformation
 import io.legado.app.help.ImageLoader
-import io.legado.app.help.IntentDataHelp
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.lib.theme.bottomBackground
@@ -35,9 +35,12 @@ import io.legado.app.ui.book.info.edit.BookInfoEditActivity
 import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.book.search.SearchActivity
 import io.legado.app.ui.book.source.edit.BookSourceEditActivity
-import io.legado.app.ui.book.toc.ChapterListActivity
+import io.legado.app.ui.book.toc.TocActivityResult
 import io.legado.app.ui.widget.image.CoverImageView
 import io.legado.app.utils.*
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 class BookInfoActivity :
@@ -47,9 +50,46 @@ class BookInfoActivity :
     ChangeSourceDialog.CallBack,
     ChangeCoverDialog.CallBack {
 
-    private val requestCodeChapterList = 568
-    private val requestCodeInfoEdit = 562
-    private val requestCodeRead = 432
+    private val tocActivityResult = registerForActivityResult(TocActivityResult()) {
+        it?.let {
+            viewModel.bookData.value?.let { book ->
+                launch {
+                    withContext(IO) {
+                        viewModel.durChapterIndex = it.first
+                        book.durChapterIndex = it.first
+                        book.durChapterPos = it.second
+                        appDb.bookDao.update(book)
+                    }
+                    viewModel.chapterListData.value?.let { chapterList ->
+                        binding.tvToc.text =
+                            getString(R.string.toc_s, chapterList[book.durChapterIndex].title)
+                    }
+                    startReadActivity(book)
+                }
+            }
+        } ?: let {
+            if (!viewModel.inBookshelf) {
+                viewModel.delBook()
+            }
+        }
+    }
+    private val readBookResult = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        viewModel.refreshData(intent)
+        if (it.resultCode == RESULT_OK) {
+            viewModel.inBookshelf = true
+            upTvBookshelf()
+        }
+    }
+    private val infoEditResult = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (it.resultCode == RESULT_OK) {
+            viewModel.upEditBook()
+        }
+    }
+
 
     override val viewModel: BookInfoViewModel by viewModels()
 
@@ -77,16 +117,23 @@ class BookInfoActivity :
         return super.onCompatCreateOptionsMenu(menu)
     }
 
+    override fun onMenuOpened(featureId: Int, menu: Menu): Boolean {
+        menu.findItem(R.id.menu_can_update)?.isChecked =
+            viewModel.bookData.value?.canUpdate ?: true
+        menu.findItem(R.id.menu_login)?.isVisible =
+            !viewModel.bookSource?.loginUrl.isNullOrBlank()
+        return super.onMenuOpened(featureId, menu)
+    }
+
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
             R.id.menu_edit -> {
                 if (viewModel.inBookshelf) {
                     viewModel.bookData.value?.let {
-                        startActivityForResult<BookInfoEditActivity>(
-                            requestCodeInfoEdit
-                        ) {
-                            putExtra("bookUrl", it.bookUrl)
-                        }
+                        infoEditResult.launch(
+                            Intent(this, BookInfoEditActivity::class.java)
+                                .putExtra("bookUrl", it.bookUrl)
+                        )
                     }
                 } else {
                     toastOnUi(R.string.after_add_bookshelf)
@@ -108,7 +155,10 @@ class BookInfoActivity :
                     viewModel.loadBookInfo(it, false)
                 }
             }
-            R.id.menu_copy_url -> viewModel.bookData.value?.bookUrl?.let {
+            R.id.menu_copy_book_url -> viewModel.bookData.value?.bookUrl?.let {
+                sendToClip(it)
+            } ?: toastOnUi(R.string.no_book)
+            R.id.menu_copy_toc_url -> viewModel.bookData.value?.tocUrl?.let {
                 sendToClip(it)
             } ?: toastOnUi(R.string.no_book)
             R.id.menu_can_update -> {
@@ -124,12 +174,6 @@ class BookInfoActivity :
             R.id.menu_clear_cache -> viewModel.clearCache()
         }
         return super.onCompatOptionsItemSelected(item)
-    }
-
-    override fun onMenuOpened(featureId: Int, menu: Menu): Boolean {
-        menu.findItem(R.id.menu_can_update)?.isChecked =
-            viewModel.bookData.value?.canUpdate ?: true
-        return super.onMenuOpened(featureId, menu)
     }
 
     private fun showBook(book: Book) = with(binding) {
@@ -300,11 +344,7 @@ class BookInfoActivity :
             return
         }
         viewModel.bookData.value?.let {
-            startActivityForResult<ChapterListActivity>(
-                requestCodeChapterList
-            ) {
-                putExtra("bookUrl", it.bookUrl)
-            }
+            tocActivityResult.launch(it.bookUrl)
         }
     }
 
@@ -324,19 +364,16 @@ class BookInfoActivity :
 
     private fun startReadActivity(book: Book) {
         when (book.type) {
-            BookType.audio -> startActivityForResult<AudioPlayActivity>(
-                requestCodeRead
-            ) {
-                putExtra("bookUrl", book.bookUrl)
-                putExtra("inBookshelf", viewModel.inBookshelf)
-            }
-            else -> startActivityForResult<ReadBookActivity>(
-                requestCodeRead
-            ) {
-                putExtra("bookUrl", book.bookUrl)
-                putExtra("inBookshelf", viewModel.inBookshelf)
-                putExtra("key", IntentDataHelp.putData(book))
-            }
+            BookType.audio -> readBookResult.launch(
+                Intent(this, AudioPlayActivity::class.java)
+                    .putExtra("bookUrl", book.bookUrl)
+                    .putExtra("inBookshelf", viewModel.inBookshelf)
+            )
+            else -> readBookResult.launch(
+                Intent(this, ReadBookActivity::class.java)
+                    .putExtra("bookUrl", book.bookUrl)
+                    .putExtra("inBookshelf", viewModel.inBookshelf)
+            )
         }
     }
 
@@ -378,33 +415,4 @@ class BookInfoActivity :
         }
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        when (requestCode) {
-            requestCodeInfoEdit ->
-                if (resultCode == Activity.RESULT_OK) {
-                    viewModel.upEditBook()
-                }
-            requestCodeChapterList ->
-                if (resultCode == Activity.RESULT_OK) {
-                    viewModel.bookData.value?.let {
-                        data?.getIntExtra("index", it.durChapterIndex)?.let { index ->
-                            if (it.durChapterIndex != index) {
-                                it.durChapterIndex = index
-                                it.durChapterPos = 0
-                            }
-                            startReadActivity(it)
-                        }
-                    }
-                } else {
-                    if (!viewModel.inBookshelf) {
-                        viewModel.delBook()
-                    }
-                }
-            requestCodeRead -> if (resultCode == Activity.RESULT_OK) {
-                viewModel.inBookshelf = true
-                upTvBookshelf()
-            }
-        }
-    }
 }

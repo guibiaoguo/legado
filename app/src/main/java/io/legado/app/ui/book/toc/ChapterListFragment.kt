@@ -28,10 +28,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.min
 
-class ChapterListFragment : VMBaseFragment<ChapterListViewModel>(R.layout.fragment_chapter_list),
+class ChapterListFragment : VMBaseFragment<TocViewModel>(R.layout.fragment_chapter_list),
     ChapterListAdapter.Callback,
-    ChapterListViewModel.ChapterListCallBack {
-    override val viewModel: ChapterListViewModel by activityViewModels()
+    TocViewModel.ChapterListCallBack {
+    override val viewModel: TocViewModel by activityViewModels()
     private val binding by viewBinding(FragmentChapterListBinding::bind)
     lateinit var adapter: ChapterListAdapter
     private var durChapterIndex = 0
@@ -49,7 +49,9 @@ class ChapterListFragment : VMBaseFragment<ChapterListViewModel>(R.layout.fragme
         ivChapterBottom.setColorFilter(btc)
         initRecyclerView()
         initView()
-        initBook()
+        viewModel.bookData.observe(this@ChapterListFragment) {
+            initBook(it)
+        }
     }
 
     private fun initRecyclerView() {
@@ -73,15 +75,13 @@ class ChapterListFragment : VMBaseFragment<ChapterListViewModel>(R.layout.fragme
     }
 
     @SuppressLint("SetTextI18n")
-    private fun initBook() {
+    private fun initBook(book: Book) {
         launch {
             initDoc()
-            viewModel.book?.let {
-                durChapterIndex = it.durChapterIndex
-                binding.tvCurrentChapterInfo.text =
-                    "${it.durChapterTitle}(${it.durChapterIndex + 1}/${it.totalChapterNum})"
-                initCacheFileNames(it)
-            }
+            durChapterIndex = book.durChapterIndex
+            binding.tvCurrentChapterInfo.text =
+                "${book.durChapterTitle}(${book.durChapterIndex + 1}/${book.totalChapterNum})"
+            initCacheFileNames(book)
         }
     }
 
@@ -108,7 +108,7 @@ class ChapterListFragment : VMBaseFragment<ChapterListViewModel>(R.layout.fragme
 
     override fun observeLiveBus() {
         observeEvent<BookChapter>(EventBus.SAVE_CONTENT) { chapter ->
-            viewModel.book?.bookUrl?.let { bookUrl ->
+            viewModel.bookData.value?.bookUrl?.let { bookUrl ->
                 if (chapter.bookUrl == bookUrl) {
                     adapter.cacheFileNames.add(chapter.getFileName())
                     adapter.notifyItemChanged(chapter.index, true)
@@ -130,15 +130,17 @@ class ChapterListFragment : VMBaseFragment<ChapterListViewModel>(R.layout.fragme
     }
 
     override val isLocalBook: Boolean
-        get() = viewModel.book?.isLocalBook() == true
+        get() = viewModel.bookData.value?.isLocalBook() == true
 
     override fun durChapterIndex(): Int {
         return min(durChapterIndex, adapter.itemCount)
     }
 
     override fun openChapter(bookChapter: BookChapter) {
-        activity?.setResult(RESULT_OK, Intent().putExtra("index", bookChapter.index))
-        activity?.finish()
+        activity?.run {
+            setResult(RESULT_OK, Intent().putExtra("index", bookChapter.index))
+            finish()
+        }
     }
 
 }

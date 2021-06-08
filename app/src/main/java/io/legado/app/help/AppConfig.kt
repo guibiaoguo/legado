@@ -11,7 +11,6 @@ import splitties.init.appCtx
 object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
     val isGooglePlay = appCtx.channel == "google"
     var userAgent: String = getPrefUserAgent()
-    var replaceEnableDefault = appCtx.getPrefBoolean(PreferKey.replaceEnableDefault, true)
     var isEInkMode = appCtx.getPrefString(PreferKey.themeMode) == "3"
     var clickActionTL = appCtx.getPrefInt(PreferKey.clickActionTL, 2)
     var clickActionTC = appCtx.getPrefInt(PreferKey.clickActionTC, 2)
@@ -73,6 +72,15 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             }
         }
 
+    var showUnread: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.showUnread, true)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.showUnread, value)
+        }
+
+    val useDefaultCover: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.useDefaultCover, false)
+
     val isTransparentStatusBar: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.transparentStatusBar, true)
 
@@ -81,6 +89,18 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     val screenOrientation: String?
         get() = appCtx.getPrefString(PreferKey.screenOrientation)
+
+    var bookGroupStyle: Int
+        get() = appCtx.getPrefInt(PreferKey.bookGroupStyle, 0)
+        set(value) {
+            appCtx.putPrefInt(PreferKey.bookGroupStyle, value)
+        }
+
+    var bookExportFileName: String?
+        get() = appCtx.getPrefString(PreferKey.bookExportFileName)
+        set(value) {
+            appCtx.putPrefString(PreferKey.bookExportFileName, value)
+        }
 
     var backupPath: String?
         get() = appCtx.getPrefString(PreferKey.backupPath)
@@ -92,7 +112,10 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             }
         }
 
-    val isShowRSS: Boolean
+    val showDiscovery: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.showDiscovery, true)
+
+    val showRSS: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.showRss, true)
 
     val autoRefreshBook: Boolean
@@ -162,6 +185,18 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
             appCtx.putPrefBoolean(PreferKey.exportToWebDav, value)
         }
 
+    var exportType: Int
+        get() = appCtx.getPrefInt(PreferKey.exportType)
+        set(value) {
+            appCtx.putPrefInt(PreferKey.exportType, value)
+        }
+
+    var changeSourceCheckAuthor: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.changeSourceCheckAuthor)
+        set(value) {
+            appCtx.putPrefBoolean(PreferKey.changeSourceCheckAuthor, value)
+        }
+
     val autoChangeSource: Boolean
         get() = appCtx.getPrefBoolean(PreferKey.autoChangeSource, true)
 
@@ -173,9 +208,18 @@ object AppConfig : SharedPreferences.OnSharedPreferenceChangeListener {
 
     val syncBookProgress get() = appCtx.getPrefBoolean(PreferKey.syncBookProgress, true)
 
-    val preDownload get() = appCtx.getPrefBoolean(PreferKey.preDownload, true)
+    var preDownloadNum
+        get() = appCtx.getPrefInt(PreferKey.preDownloadNum, 10)
+        set(value) {
+            appCtx.putPrefInt(PreferKey.preDownloadNum, value)
+        }
 
     val mediaButtonOnExit get() = appCtx.getPrefBoolean("mediaButtonOnExit", true)
+
+    val replaceEnableDefault get() = appCtx.getPrefBoolean(PreferKey.replaceEnableDefault, true)
+
+    val fullScreenGesturesSupport: Boolean
+        get() = appCtx.getPrefBoolean(PreferKey.fullScreenGesturesSupport, false)
 
     private fun getPrefUserAgent(): String {
         val ua = appCtx.getPrefString(PreferKey.userAgent)

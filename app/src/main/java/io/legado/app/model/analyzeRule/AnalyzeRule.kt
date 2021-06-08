@@ -67,11 +67,11 @@ class AnalyzeRule(val ruleData: RuleDataInterface) : JsExtensions {
         return this
     }
 
-    fun setRedirectUrl(url: String): AnalyzeRule {
+    fun setRedirectUrl(url: String): URL? {
         kotlin.runCatching {
             redirectUrl = URL(url.split(AnalyzeUrl.splitUrlRegex, 1)[0])
         }
-        return this
+        return redirectUrl
     }
 
     /**
@@ -650,9 +650,7 @@ class AnalyzeRule(val ruleData: RuleDataInterface) : JsExtensions {
         bindings["title"] = chapter?.title
         bindings["src"] = content
         bindings["nextChapterUrl"] = nextChapterUrl
-        return runBlocking {
-            SCRIPT_ENGINE.eval(jsStr, bindings)
-        }
+        return SCRIPT_ENGINE.eval(jsStr, bindings)
     }
 
     /**
