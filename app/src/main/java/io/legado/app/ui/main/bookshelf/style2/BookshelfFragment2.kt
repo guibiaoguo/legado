@@ -22,7 +22,7 @@ import io.legado.app.help.AppConfig
 import io.legado.app.lib.theme.ATH
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.lib.theme.primaryTextColor
-import io.legado.app.ui.audio.AudioPlayActivity
+import io.legado.app.ui.book.audio.AudioPlayActivity
 import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.book.read.ReadBookActivity
 import io.legado.app.ui.book.search.SearchActivity
@@ -121,11 +121,9 @@ class BookshelfFragment2 : BaseBookshelfFragment(R.layout.fragment_bookshelf1),
         bookGroupLiveData?.removeObservers(this)
         bookGroupLiveData = appDb.bookGroupDao.liveDataShow().apply {
             observe(viewLifecycleOwner) {
-                if (it.size != bookGroups.size) {
+                if (it != bookGroups) {
                     bookGroups = it
                     booksAdapter.notifyDataSetChanged()
-                } else {
-
                 }
             }
         }
@@ -183,7 +181,8 @@ class BookshelfFragment2 : BaseBookshelfFragment(R.layout.fragment_bookshelf1),
     override fun onItemClick(position: Int) {
         if (position < bookGroups.size) {
             val bookGroup = bookGroups[position]
-
+            groupId = bookGroup.groupId
+            initBooksData()
         } else {
             val book = books[position - bookGroups.size]
             when (book.type) {
@@ -200,6 +199,7 @@ class BookshelfFragment2 : BaseBookshelfFragment(R.layout.fragment_bookshelf1),
 
     override fun onItemLongClick(position: Int) {
         if (position < bookGroups.size) {
+            val bookGroup = bookGroups[position]
 
         } else {
             val book = books[position - bookGroups.size]
@@ -230,6 +230,9 @@ class BookshelfFragment2 : BaseBookshelfFragment(R.layout.fragment_bookshelf1),
         super.observeLiveBus()
         observeEvent<String>(EventBus.UP_BOOK) {
             booksAdapter.notification(it)
+        }
+        observeEvent<String>(EventBus.BOOKSHELF_REFRESH) {
+            booksAdapter.notifyDataSetChanged()
         }
     }
 }

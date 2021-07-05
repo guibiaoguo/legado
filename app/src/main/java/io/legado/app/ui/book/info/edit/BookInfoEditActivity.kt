@@ -16,6 +16,7 @@ import io.legado.app.lib.permission.Permissions
 import io.legado.app.lib.permission.PermissionsCompat
 import io.legado.app.ui.book.changecover.ChangeCoverDialog
 import io.legado.app.utils.*
+import io.legado.app.utils.viewbindingdelegate.viewBinding
 import java.io.File
 
 class BookInfoEditActivity :
@@ -29,12 +30,8 @@ class BookInfoEditActivity :
             }
         }
 
-    override val viewModel: BookInfoEditViewModel
-            by viewModels()
-
-    override fun getViewBinding(): ActivityBookInfoEditBinding {
-        return ActivityBookInfoEditBinding.inflate(layoutInflater)
-    }
+    override val binding by viewBinding(ActivityBookInfoEditBinding::inflate)
+    override val viewModel by viewModels<BookInfoEditViewModel>()
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         viewModel.bookData.observe(this, { upView(it) })

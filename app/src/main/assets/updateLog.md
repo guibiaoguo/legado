@@ -8,10 +8,53 @@
 * 正文出现缺字漏字、内容缺失、排版错乱等情况，有可能是净化规则出现问题。先关闭替换净化并刷新，再观察是否正常。如果正常说明净化规则存在误杀，如果关闭后仍然出现相关问题，请点击源链接查看原文与正文是否相同，如果不同，再进行反馈。
 * 漫画源看书显示乱码，**阅读与其他软件的源并不通用**，请导入阅读的支持的漫画源！
 
+**2021/07/05**
+1. 默认规则新增类似`jsonPath`的索引写法 by bushixuanqi
+* 格式形如 `[index,index, ...]` 或 `[!index,index, ...]` 其中`[!`开头表示筛选方式为排除，`index`可以是单个索引，也可以是区间。
+* 区间格式为 `start:end` 或 `start:end:step`，其中`start`为`0`可省略，`end`为`-1`可省略。
+* 索引、区间两端、区间间隔都支持负数
+* 例如 `tag.div[-1, 3:-2:-10, 2]`
+* 特殊用法 `tag.div[-1:0]` 可在任意地方让列表反向
+2. 允许索引作为@分段后每个部分的首规则，此时相当于前面是`children`
+* `head@.1@text` 与 `head@[1]@text` 与 `head@children[1]@text` 等价
+3. 添加Umd格式支持 by ag2s20150909
+4. 修复web页面按键重复监听的bug
+5. 亮度条往中间移了一点,防止误触
+
+**2021/06/29**
+* 修复html格式化bug
+* 订阅界面webView支持css prefers-color-scheme: dark 查询,需webView v76或更高版本
+* 如webView低于v76可以用js调用activity.isNightTheme()来获取当前是否暗模式
+* 修复一些书籍导出epub失败 by ag2s20150909
+
+**2021/06/22**
+* 修复隐藏未读设置不生效的bug
+* 修复系统字体大小选择大时导入界面按钮显示不全的bug
+* 修复听书从后台打开时不对的bug
+
+**2021/06/20**
+* viewPager2 改回 viewPager
+* 添加配置导入文件规则功能 by bushixuanqi
+* 文件夹分组样式优化(未完成)
+* epub支持外部模板
+* 修复一些bug
+
 **2021/06/06**
 * 添加自定义导出文件名
 * 添加书架文件夹分组样式,未完成
 * viewPager2 3层嵌套有问题,书架换回viewPager
+
+**2021/05/29**
+* 谷歌版可使用外部epub模板
+* Asset文件夹下二级以内目录全文件读取，Asset->文件夹->文件
+* epub元数据修改，使修改字体只对正文生效
+* 修复epub模板文件的排序问题
+* epub可自定义模板，模板路径为书籍导出目录的Asset文件夹，[模板范例](https://wwa.lanzoux.com/ibjBspkn05i)
+```
+Asset中里面必须有Text文件夹，Text文件夹里必须有chapter.html，否则导出正文会为空
+chapter.html的关键字有{title}、{content}
+其他html文件的关键字有{name}、{author}、{intro}、{kind}、{wordCount}
+```
 
 **2021/05/26**
 * 书签绑定书名与作者
